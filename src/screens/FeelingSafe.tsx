@@ -6,40 +6,53 @@ import { ShieldCheck, Target, AlertTriangle } from 'lucide-react';
 export default function FeelingSafe() {
   const navigate = useNavigate();
   const { profile, setSOSActive } = useAppStore();
+
+  const [currentQuestion, setCurrentQuestion] = useState<{ question: string; answer: string } | null>(null);
   const [answer, setAnswer] = useState('');
   const [error, setError] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
 
+  // Pick a random security question when component loads
+  useEffect(() => {
+    if (profile?.securityQuestions && profile.securityQuestions.length > 0) {
+      // Randomly select one question from the array
+      const randomIndex = Math.floor(Math.random() * profile.securityQuestions.length);
+      setCurrentQuestion(profile.securityQuestions[randomIndex]);
+    } else {
+      // Fallback if no questions found (old users)
+      setCurrentQuestion({
+        question: "What is your favorite color?",
+        answer: ""
+      });
+    }
+  }, [profile]);
+
+  // Countdown timer
   useEffect(() => {
     if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
       return () => clearTimeout(timer);
     } else {
-      // Timeout triggered SOS
+      // Time out → Trigger SOS
       setSOSActive(true);
       navigate('/');
     }
   }, [timeLeft, navigate, setSOSActive]);
 
   const verify = () => {
-    if (answer.toLowerCase().trim() === profile?.securityAnswer?.toLowerCase().trim()) {
-      // Success
+    if (!currentQuestion) return;
+
+    if (answer.toLowerCase().trim() === currentQuestion.answer.toLowerCase().trim()) {
+      // Correct answer → User is safe
       navigate('/');
     } else {
       setError(true);
-      // Wait for a bit then trigger SOS or drop straight to SOS
+      // Wrong answer → Trigger SOS after short delay
       setTimeout(() => {
         setSOSActive(true);
         navigate('/');
-      }, 1000);
+      }, 1200);
     }
-  };
-
-  const getQuestionText = (q?: string) => {
-    if (q === 'color') return 'What is your favorite color?';
-    if (q === 'pet') return 'What is the name of your first pet?';
-    if (q === 'city') return 'What city were you born in?';
-    return 'Security Question:';
   };
 
   return (
@@ -59,17 +72,20 @@ export default function FeelingSafe() {
         </div>
 
         <p className="text-app-text mb-6 leading-relaxed">
-          Please answer your security question to verify you are safe. <span className="text-app-red font-medium">An incorrect answer will instantly trigger an SOS.</span>
+          Please answer this security question to verify you are safe. 
+          <span className="text-app-red font-medium"> Wrong answer will trigger SOS immediately.</span>
         </p>
 
-        <div className="bg-app-card p-4 rounded-xl border border-app-border mb-6">
-          <p className="text-sm text-app-dim uppercase font-bold tracking-wider mb-2 flex items-center gap-2">
-            <Target className="w-4 h-4" /> The Question
-          </p>
-          <p className="text-app-text text-lg font-medium">
-            {getQuestionText(profile?.securityQuestion)}
-          </p>
-        </div>
+        {currentQuestion && (
+          <div className="bg-app-card p-4 rounded-xl border border-app-border mb-6">
+            <p className="text-sm text-app-dim uppercase font-bold tracking-wider mb-2 flex items-center gap-2">
+              <Target className="w-4 h-4" /> Security Question
+            </p>
+            <p className="text-app-text text-lg font-medium leading-tight">
+              {currentQuestion.question}
+            </p>
+          </div>
+        )}
 
         <input
           type="text"
@@ -79,7 +95,7 @@ export default function FeelingSafe() {
             setError(false);
           }}
           className={`w-full bg-app-card border ${error ? 'border-red-500' : 'border-app-border focus:border-app-blue'} text-app-text rounded-xl p-4 text-lg outline-none transition mb-8`}
-          placeholder="Your secret answer..."
+          placeholder="Type your answer here..."
           autoFocus
         />
 
@@ -92,7 +108,7 @@ export default function FeelingSafe() {
 
         <button 
           onClick={verify}
-          disabled={!answer}
+          disabled={!answer.trim() || !currentQuestion}
           className="w-full bg-app-blue text-app-text font-bold py-4 rounded-xl hover:bg-app-blue active:bg-app-blue/80 transition disabled:opacity-50"
         >
           Verify Identity
@@ -100,7 +116,10 @@ export default function FeelingSafe() {
       </div>
       
       <div className="text-center mt-6">
-        <button className="text-app-red font-bold uppercase tracking-widest text-sm py-4" onClick={() => setSOSActive(true)}>
+        <button 
+          className="text-app-red font-bold uppercase tracking-widest text-sm py-4" 
+          onClick={() => setSOSActive(true)}
+        >
           I AM NOT SAFE (TRIGGER SOS)
         </button>
       </div>
