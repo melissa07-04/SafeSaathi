@@ -4,6 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAppStore } from './store/useAppStore';
+import { LoadScript } from '@react-google-maps/api';
 
 import Login from './screens/Login';
 import Register from './screens/Register';
@@ -14,6 +15,8 @@ import Profile from './screens/Profile';
 import FeelingSafe from './screens/FeelingSafe';
 import SOSButton from './components/SOSButton';
 import BottomNav from './components/BottomNav';
+
+const GOOGLE_MAPS_API_KEY = "AIzaSyCL3rWDtBsecZ2up7nDtPVHy2bh0QhMI58";   // ← Paste your actual key here
 
 export default function App() {
   const { setAuthUser, setProfile } = useAppStore();
@@ -52,32 +55,36 @@ export default function App() {
     <div className="bg-app-bg min-h-screen flex justify-center w-full font-sans text-app-text">
       <div className="w-full max-w-md bg-app-bg min-h-screen relative shadow-2xl flex flex-col sm:border-x sm:border-app-border">
         <BrowserRouter>
-          <div className="flex-1 overflow-x-hidden overflow-y-auto pb-24">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
-              <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/feeling-safe" element={<ProtectedRoute><FeelingSafe /></ProtectedRoute>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
-          <AuthWrapper>
-            <SOSButton />
-            <BottomNav />
-          </AuthWrapper>
+          <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
+            <div className="flex-1 overflow-x-hidden overflow-y-auto pb-24">
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
+                <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/feeling-safe" element={<ProtectedRoute><FeelingSafe /></ProtectedRoute>} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
+
+            <AuthWrapper>
+              <SOSButton />
+              <BottomNav />
+            </AuthWrapper>
+          </LoadScript>
         </BrowserRouter>
       </div>
     </div>
   );
 }
 
-function ProtectedRoute({ children }: { children: JSX.Element }) {
+// Fixed ProtectedRoute
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const authUser = useAppStore((state) => state.authUser);
   if (!authUser) return <Navigate to="/login" replace />;
-  return children;
+  return <>{children}</>;
 }
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
