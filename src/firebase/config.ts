@@ -21,4 +21,4 @@ export const auth = getAuth(app);
 
 // 🧠 Firestore
 export const db = getFirestore(app);
-export const db = getFirestore(app);
+
