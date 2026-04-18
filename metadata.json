@@ -1,0 +1,8 @@
+{
+  "name": "SafeSaathi",
+  "description": "A personal safety app ensuring user safety during travel with live tracking, AI deviation detection, and SOS features.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}

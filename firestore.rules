@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // User validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 150
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 20))
+        && (!('securityQuestion' in data) || (data.securityQuestion is string && data.securityQuestion.size() <= 200))
+        && (!('securityAnswer' in data) || (data.securityAnswer is string && data.securityAnswer.size() <= 200))
+        && (!('height' in data) || (data.height is string && data.height.size() <= 10))
+        && (!('weight' in data) || (data.weight is string && data.weight.size() <= 10))
+        && (!('bloodGroup' in data) || (data.bloodGroup is string && data.bloodGroup.size() <= 10))
+        && (!('illnesses' in data) || (data.illnesses is string && data.illnesses.size() <= 500))
+        && (!('allergies' in data) || (data.allergies is string && data.allergies.size() <= 500))
+        && (!('createdAt' in data) || data.createdAt is int);
+    }
+    
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow create: if isSignedIn() 
+        && isValidId(userId)
+        && request.auth.uid == userId 
+        && isValidUser(incoming());
+      
+      allow update: if isSignedIn() 
+        && isValidId(userId)
+        && request.auth.uid == userId 
+        && isValidUser(incoming())
+        && (!('createdAt' in incoming()) || existing().createdAt == null || incoming().createdAt == existing().createdAt);
+      
+      match /contacts/{contactId} {
+        function isValidContact(data) {
+          return data.keys().hasAll(['name', 'phone', 'notifySOS', 'notifyTracking', 'createdAt'])
+            && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+            && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 20
+            && data.notifySOS is bool
+            && data.notifyTracking is bool
+            && data.createdAt is int;
+        }
+        
+        allow list, get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+        allow create: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(contactId)
+          && request.auth.uid == userId
+          && isValidContact(incoming())
+          && incoming().createdAt == request.time.toMillis();
+        allow update: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(contactId)
+          && request.auth.uid == userId
+          && isValidContact(incoming())
+          && (
+             incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'notifySOS', 'notifyTracking'])
+          );
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(contactId) && request.auth.uid == userId;
+      }
+    }
+    
+    match /journeys/{journeyId} {
+      function isValidJourney(data) {
+        return data.keys().hasAll(['userId', 'source', 'destination', 'status', 'createdAt', 'updatedAt'])
+          && data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128
+          && data.source is string && data.source.size() > 0 && data.source.size() <= 200
+          && data.destination is string && data.destination.size() > 0 && data.destination.size() <= 200
+          && data.status is string && data.status in ['planned', 'active', 'completed', 'sos']
+          && data.createdAt is int
+          && data.updatedAt is int;
+      }
+      
+      allow list, get: if isSignedIn() && isValidId(journeyId) && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+        && isValidId(journeyId)
+        && incoming().userId == request.auth.uid
+        && isValidJourney(incoming())
+        && incoming().createdAt == request.time.toMillis()
+        && incoming().updatedAt == request.time.toMillis();
+        
+      allow update: if isSignedIn()
+        && isValidId(journeyId)
+        && existing().userId == request.auth.uid
+        && incoming().userId == request.auth.uid
+        && isValidJourney(incoming())
+        && incoming().updatedAt == request.time.toMillis()
+        && incoming().createdAt == existing().createdAt
+        && (
+           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) ||
+           incoming().diff(existing()).affectedKeys().hasOnly(['destination', 'updatedAt']) ||
+           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'destination', 'updatedAt'])
+        );
+    }
+  }
+}

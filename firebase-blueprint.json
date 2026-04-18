@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile including medical info and security questions",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "securityQuestion": { "type": "string" },
+        "securityAnswer": { "type": "string", "description": "Hashed or plain for prototype" },
+        "height": { "type": "string" },
+        "weight": { "type": "string" },
+        "bloodGroup": { "type": "string" },
+        "illnesses": { "type": "string" },
+        "allergies": { "type": "string" },
+        "createdAt": { "type": "number", "description": "Timestamp" }
+      },
+      "required": ["name", "email"]
+    },
+    "Contact": {
+      "title": "Trusted Contact",
+      "description": "A trusted contact for SOS and tracking updates",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "notifySOS": { "type": "boolean" },
+        "notifyTracking": { "type": "boolean" },
+        "createdAt": { "type": "number", "description": "Timestamp" }
+      },
+      "required": ["name", "phone"]
+    },
+    "Journey": {
+      "title": "Journey",
+      "description": "A travel session tracked by the app",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "source": { "type": "string" },
+        "destination": { "type": "string" },
+        "status": { "type": "string", "enum": ["planned", "active", "completed", "sos"] },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "source", "destination", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "The master record for a user"
+    },
+    "/users/{userId}/contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/Contact" },
+      "description": "User's trusted contacts"
+    },
+    "/journeys/{journeyId}": {
+      "schema": { "$ref": "#/entities/Journey" },
+      "description": "Active and past journeys"
+    }
+  }
+}
